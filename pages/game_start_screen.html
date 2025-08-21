@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Escape the Haunted House - Start Game</title>
+    <link rel="stylesheet" href="../css/main.css" />
+    <style>
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes ghostFloat {
+            0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(5deg); }
+            66% { transform: translate(-20px, 20px) rotate(-5deg); }
+        }
+        
+        .flicker-text {
+            animation: flicker 2s ease-in-out infinite;
+        }
+        
+        .floating-element {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .ghost-particle {
+            animation: ghostFloat 8s ease-in-out infinite;
+        }
+        
+        .haunted-bg {
+            background: linear-gradient(135deg, #0F0F23 0%, #1A0E42 50%, #2D1B69 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .haunted-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(45, 27, 105, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 23, 68, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
+    </style>
+<script type="module" src="https://static.rocket.new/rocket-web.js?_cfg=https%3A%2F%2Fescapethe5268back.builtwithrocket.new&_be=https%3A%2F%2Fapplication.rocket.new&_v=0.1.6"></script>
+</head>
+<body class="haunted-bg min-h-screen flex items-center justify-center p-4">
+    <!-- Floating Ghost Particles -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden">
+        <div class="ghost-particle absolute top-20 left-10 w-4 h-4 bg-white/10 rounded-full blur-sm"></div>
+        <div class="ghost-particle absolute top-40 right-20 w-3 h-3 bg-accent/20 rounded-full blur-sm" style="animation-delay: -2s;"></div>
+        <div class="ghost-particle absolute bottom-32 left-1/4 w-5 h-5 bg-primary/20 rounded-full blur-sm" style="animation-delay: -4s;"></div>
+        <div class="ghost-particle absolute bottom-20 right-1/3 w-2 h-2 bg-white/15 rounded-full blur-sm" style="animation-delay: -6s;"></div>
+    </div>
+
+    <!-- Main Game Start Container -->
+    <div class="relative z-10 w-full max-w-md mx-auto">
+        <!-- Game Title -->
+        <div class="text-center mb-12">
+            <h1 class="font-heading text-4xl md:text-5xl font-black text-accent mb-4 flicker-text">
+                ESCAPE THE
+            </h1>
+            <h2 class="font-heading text-3xl md:text-4xl font-bold text-white mb-2">
+                HAUNTED HOUSE
+            </h2>
+            <div class="w-32 h-1 bg-gradient-to-r from-transparent via-accent to-transparent mx-auto"></div>
+        </div>
+
+        <!-- Haunted House Icon -->
+        <div class="text-center mb-8 floating-element">
+            <div class="inline-block p-6 bg-surface/30 rounded-full border border-primary/30 backdrop-blur-sm">
+                <svg class="w-16 h-16 text-accent" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3zm0 2.84L18 11v7h-2v-6H8v6H6v-7l6-5.16z"/>
+                    <rect x="9" y="9" width="2" height="2" fill="currentColor"/>
+                    <rect x="13" y="9" width="2" height="2" fill="currentColor"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Main Action Buttons -->
+        <div class="space-y-4 mb-8">
+            <!-- Start Game Button -->
+            <button onclick="startGame()" class="w-full bg-accent hover:bg-accent-500 text-background font-heading font-bold text-xl py-4 px-8 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-glow-md transform active:scale-95">
+                🎮 START GAME
+            </button>
+
+            <!-- Instructions Button -->
+            <button onclick="showInstructions()" class="w-full bg-primary hover:bg-primary-700 text-white font-heading font-medium text-lg py-3 px-6 rounded-lg border border-primary-600 transition-all duration-300 hover:scale-105 hover:shadow-glow-sm transform active:scale-95">
+                📖 INSTRUCTIONS
+            </button>
+
+            <!-- High Scores Button -->
+            <button onclick="showHighScores()" class="w-full bg-surface hover:bg-surface-700 text-text-primary font-heading font-medium text-lg py-3 px-6 rounded-lg border border-surface-600 transition-all duration-300 hover:scale-105 hover:shadow-glow-sm transform active:scale-95">
+                🏆 HIGH SCORES
+            </button>
+        </div>
+
+        <!-- Game Info -->
+        <div class="text-center text-text-secondary text-sm">
+            <p class="mb-2">🎯 Collect keys • 👻 Avoid ghosts • 💀 Survive traps</p>
+            <p>© 2025 Haunted House Games. All Rights Reserved.</p>
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="instructionsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-surface border border-primary/30 rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-heading text-2xl font-bold text-accent">Game Instructions</h3>
+                <button onclick="hideInstructions()" class="text-text-secondary hover:text-white text-2xl font-bold">×</button>
+            </div>
+            
+            <div class="space-y-4 text-text-primary">
+                <div class="bg-background/50 p-4 rounded-lg">
+                    <h4 class="font-heading font-bold text-accent mb-2">🎮 Controls</h4>
+                    <ul class="space-y-1 text-sm">
+                        <li><span class="font-mono bg-primary/20 px-2 py-1 rounded">WASD</span> or <span class="font-mono bg-primary/20 px-2 py-1 rounded">Arrow Keys</span> - Move</li>
+                        <li><span class="font-mono bg-primary/20 px-2 py-1 rounded">SPACE</span> or <span class="font-mono bg-primary/20 px-2 py-1 rounded">W/↑</span> - Jump</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-background/50 p-4 rounded-lg">
+                    <h4 class="font-heading font-bold text-accent mb-2">🎯 Objective</h4>
+                    <ul class="space-y-1 text-sm">
+                        <li>🗝️ Collect golden keys to unlock doors</li>
+                        <li>🚪 Reach the door to advance to next level</li>
+                        <li>🏃‍♂️ Complete all levels to escape!</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-background/50 p-4 rounded-lg">
+                    <h4 class="font-heading font-bold text-error mb-2">⚠️ Dangers</h4>
+                    <ul class="space-y-1 text-sm">
+                        <li>👻 White ghosts patrol horizontally</li>
+                        <li>🔺 Red spikes cause damage</li>
+                        <li>💀 Falling objects from above</li>
+                        <li>❤️ You have 3 lives - use them wisely!</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-background/50 p-4 rounded-lg">
+                    <h4 class="font-heading font-bold text-success mb-2">✨ Power-ups</h4>
+                    <ul class="space-y-1 text-sm">
+                        <li>✝️ Cross power-up grants temporary ghost protection</li>
+                        <li>🛡️ Glowing effect indicates active protection</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <button onclick="hideInstructions()" class="w-full mt-6 bg-accent hover:bg-accent-500 text-background font-heading font-bold py-3 px-6 rounded-lg transition-all duration-300">
+                Got It!
+            </button>
+        </div>
+    </div>
+
+    <!-- High Scores Modal -->
+    <div id="highScoresModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-surface border border-primary/30 rounded-xl p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-heading text-2xl font-bold text-accent">High Scores</h3>
+                <button onclick="hideHighScores()" class="text-text-secondary hover:text-white text-2xl font-bold">×</button>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="flex justify-between items-center p-3 bg-background/50 rounded-lg border border-accent/20">
+                    <div class="flex items-center gap-3">
+                        <span class="font-heading text-accent font-bold">1st</span>
+                        <span class="text-text-primary">Shadow Walker</span>
+                    </div>
+                    <span class="font-data text-accent font-bold">15,750</span>
+                </div>
+                
+                <div class="flex justify-between items-center p-3 bg-background/50 rounded-lg border border-surface-600">
+                    <div class="flex items-center gap-3">
+                        <span class="font-heading text-text-secondary font-bold">2nd</span>
+                        <span class="text-text-primary">Ghost Hunter</span>
+                    </div>
+                    <span class="font-data text-text-primary font-bold">12,340</span>
+                </div>
+                
+                <div class="flex justify-between items-center p-3 bg-background/50 rounded-lg border border-surface-600">
+                    <div class="flex items-center gap-3">
+                        <span class="font-heading text-text-secondary font-bold">3rd</span>
+                        <span class="text-text-primary">Escape Artist</span>
+                    </div>
+                    <span class="font-data text-text-primary font-bold">9,820</span>
+                </div>
+                
+                <div class="flex justify-between items-center p-3 bg-background/50 rounded-lg border border-surface-600">
+                    <div class="flex items-center gap-3">
+                        <span class="font-heading text-text-secondary font-bold">4th</span>
+                        <span class="text-text-primary">Key Master</span>
+                    </div>
+                    <span class="font-data text-text-primary font-bold">7,650</span>
+                </div>
+                
+                <div class="flex justify-between items-center p-3 bg-background/50 rounded-lg border border-surface-600">
+                    <div class="flex items-center gap-3">
+                        <span class="font-heading text-text-secondary font-bold">5th</span>
+                        <span class="text-text-primary">Survivor</span>
+                    </div>
+                    <span class="font-data text-text-primary font-bold">5,430</span>
+                </div>
+            </div>
+            
+            <button onclick="hideHighScores()" class="w-full mt-6 bg-primary hover:bg-primary-700 text-white font-heading font-bold py-3 px-6 rounded-lg transition-all duration-300">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Start Game Function
+        function startGame() {
+            // Add loading effect
+            const startBtn = document.querySelector('button[onclick="startGame()"]');
+            startBtn.innerHTML = '🎮 LOADING...';
+            startBtn.disabled = true;
+            
+            // Simulate loading and redirect
+            setTimeout(() => {
+                window.location.href = 'main_game_screen.html';
+            }, 1000);
+        }
+
+        // Instructions Modal Functions
+        function showInstructions() {
+            const modal = document.getElementById('instructionsModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideInstructions() {
+            const modal = document.getElementById('instructionsModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }
+
+        // High Scores Modal Functions
+        function showHighScores() {
+            const modal = document.getElementById('highScoresModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideHighScores() {
+            const modal = document.getElementById('highScoresModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'instructionsModal') {
+                hideInstructions();
+            }
+            if (e.target.id === 'highScoresModal') {
+                hideHighScores();
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideInstructions();
+                hideHighScores();
+            }
+            if (e.key === 'Enter' && !document.querySelector('.fixed.flex')) {
+                startGame();
+            }
+        });
+
+        // Add some interactive sound effects (visual feedback)
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+            });
+            
+            button.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+            
+            button.addEventListener('mousedown', function() {
+                this.style.transform = 'scale(0.95)';
+            });
+            
+            button.addEventListener('mouseup', function() {
+                this.style.transform = 'scale(1.05)';
+            });
+        });
+
+        // Preload next page for faster navigation
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = 'main_game_screen.html';
+        document.head.appendChild(link);
+    </script>
+<script id="dhws-dataInjector" src="../public/dhws-data-injector.js"></script>
+</body>
+</html>

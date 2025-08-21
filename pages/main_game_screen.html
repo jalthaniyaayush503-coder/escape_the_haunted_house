@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Escape the Haunted House - Game</title>
+    <link rel="stylesheet" href="../css/main.css" />
+    <style>
+        @keyframes collectPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes damageBlink {
+            0%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+        
+        @keyframes powerUpGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+        }
+        
+        .collect-animation {
+            animation: collectPulse 0.3s ease-out;
+        }
+        
+        .damage-flash {
+            animation: damageBlink 0.5s ease-out;
+        }
+        
+        .power-up-active {
+            animation: powerUpGlow 1s ease-in-out infinite;
+        }
+        
+        .touch-control {
+            background: rgba(45, 27, 105, 0.3);
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            backdrop-filter: blur(4px);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .touch-control:active {
+            background: rgba(255, 215, 0, 0.2);
+            transform: scale(0.95);
+        }
+        
+        #gameCanvas {
+            background: linear-gradient(135deg, #0F0F23 0%, #1A0E42 50%, #2D1B69 100%);
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        .hud-element {
+            background: rgba(22, 33, 62, 0.8);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+<script type="module" src="https://static.rocket.new/rocket-web.js?_cfg=https%3A%2F%2Fescapethe5268back.builtwithrocket.new&_be=https%3A%2F%2Fapplication.rocket.new&_v=0.1.6"></script>
+</head>
+<body class="bg-background min-h-screen overflow-hidden">
+    <!-- Game Container -->
+    <div id="gameContainer" class="relative w-full h-screen">
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" class="absolute inset-0 w-full h-full"></canvas>
+        
+        <!-- HUD Overlay -->
+        <div class="absolute inset-0 pointer-events-none z-10">
+            <!-- Top HUD Bar -->
+            <div class="flex justify-between items-start p-4">
+                <!-- Lives Counter -->
+                <div class="hud-element rounded-lg p-3 pointer-events-auto">
+                    <div class="flex items-center gap-2">
+                        <span class="font-heading text-accent font-bold text-sm">LIVES</span>
+                        <div id="livesDisplay" class="flex gap-1">
+                            <span class="text-error text-lg">❤️</span>
+                            <span class="text-error text-lg">❤️</span>
+                            <span class="text-error text-lg">❤️</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Level Display -->
+                <div class="hud-element rounded-lg p-3 pointer-events-auto">
+                    <div class="text-center">
+                        <div class="font-heading text-accent font-bold text-sm">LEVEL</div>
+                        <div id="levelDisplay" class="font-data text-white text-xl font-bold">1</div>
+                    </div>
+                </div>
+                
+                <!-- Score Display -->
+                <div class="hud-element rounded-lg p-3 pointer-events-auto">
+                    <div class="text-right">
+                        <div class="font-heading text-accent font-bold text-sm">SCORE</div>
+                        <div id="scoreDisplay" class="font-data text-white text-xl font-bold">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Power-up Status -->
+            <div id="powerUpStatus" class="absolute top-20 left-1/2 transform -translate-x-1/2 hud-element rounded-lg p-2 hidden">
+                <div class="flex items-center gap-2">
+                    <span class="text-accent text-lg">✝️</span>
+                    <span class="font-heading text-accent font-bold text-sm">PROTECTED</span>
+                </div>
+            </div>
+            
+            <!-- Keys Collected -->
+            <div id="keysStatus" class="absolute top-4 left-1/2 transform -translate-x-1/2 hud-element rounded-lg p-2 hidden">
+                <div class="flex items-center gap-2">
+                    <span class="text-accent text-lg">🗝️</span>
+                    <span class="font-heading text-accent font-bold text-sm">KEY COLLECTED</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Touch Controls -->
+        <div id="touchControls" class="absolute bottom-4 inset-x-4 flex justify-between items-end pointer-events-none md:hidden z-20">
+            <!-- Movement Controls -->
+            <div class="flex gap-2 pointer-events-auto">
+                <button id="leftBtn" class="touch-control w-16 h-16 rounded-full flex items-center justify-center font-bold text-accent text-xl">
+                    ←
+                </button>
+                <button id="rightBtn" class="touch-control w-16 h-16 rounded-full flex items-center justify-center font-bold text-accent text-xl">
+                    →
+                </button>
+            </div>
+            
+            <!-- Jump Control -->
+            <div class="pointer-events-auto">
+                <button id="jumpBtn" class="touch-control w-20 h-20 rounded-full flex items-center justify-center font-bold text-accent text-xl">
+                    ↑
+                </button>
+            </div>
+        </div>
+        
+        <!-- Pause Menu -->
+        <div id="pauseMenu" class="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+            <div class="bg-surface border border-primary/30 rounded-xl p-8 max-w-sm w-full mx-4">
+                <h2 class="font-heading text-2xl font-bold text-accent text-center mb-6">GAME PAUSED</h2>
+                
+                <div class="space-y-4">
+                    <button id="resumeBtn" class="w-full bg-accent hover:bg-accent-500 text-background font-heading font-bold py-3 px-6 rounded-lg transition-all duration-300">
+                        Resume Game
+                    </button>
+                    
+                    <button id="restartBtn" class="w-full bg-primary hover:bg-primary-700 text-white font-heading font-medium py-3 px-6 rounded-lg border border-primary-600 transition-all duration-300">
+                        Restart Level
+                    </button>
+                    
+                    <button onclick="window.location.href='game_start_screen.html'" class="w-full bg-surface hover:bg-surface-700 text-text-primary font-heading font-medium py-3 px-6 rounded-lg border border-surface-600 transition-all duration-300">
+                        Main Menu
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="absolute inset-0 bg-background z-40 flex items-center justify-center">
+            <div class="text-center">
+                <div class="w-16 h-16 border-4 border-accent/30 border-t-accent rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="font-heading text-accent font-bold text-lg">Loading Level...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game Variables
+        let canvas, ctx;
+        let gameState = 'loading'; // loading, playing, paused, gameOver, victory
+        let currentLevel = 1;
+        let score = 0;
+        let lives = 3;
+        let keys = 0;
+        let powerUpActive = false;
+        let powerUpTimer = 0;
+        
+        // Player Object
+        let player = {
+            x: 50,
+            y: 400,
+            width: 30,
+            height: 30,
+            velocityX: 0,
+            velocityY: 0,
+            speed: 5,
+            jumpPower: 15,
+            onGround: false,
+            color: '#FFD700',
+            invulnerable: false,
+            invulnerabilityTimer: 0
+        };
+        
+        // Game Objects Arrays
+        let ghosts = [];
+        let spikes = [];
+        let fallingObjects = [];
+        let collectibles = [];
+        let powerUps = [];
+        let platforms = [];
+        let door = null;
+        
+        // Input Handling
+        let keys_pressed = {};
+        let touchControls = {
+            left: false,
+            right: false,
+            jump: false
+        };
+        
+        // Initialize Game
+        function initGame() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Setup input handlers
+            setupInputHandlers();
+            
+            // Load first level
+            setTimeout(() => {
+                loadLevel(currentLevel);
+                gameState = 'playing';
+                document.getElementById('loadingScreen').style.display = 'none';
+                gameLoop();
+            }, 1500);
+        }
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        function setupInputHandlers() {
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                keys_pressed[e.code] = true;
+                
+                if (e.code === 'Escape') {
+                    togglePause();
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys_pressed[e.code] = false;
+            });
+            
+            // Touch controls
+            const leftBtn = document.getElementById('leftBtn');
+            const rightBtn = document.getElementById('rightBtn');
+            const jumpBtn = document.getElementById('jumpBtn');
+            
+            // Left button
+            leftBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchControls.left = true;
+            });
+            leftBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.left = false;
+            });
+            
+            // Right button
+            rightBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchControls.right = true;
+            });
+            rightBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.right = false;
+            });
+            
+            // Jump button
+            jumpBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchControls.jump = true;
+            });
+            jumpBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls.jump = false;
+            });
+            
+            // Pause menu buttons
+            document.getElementById('resumeBtn').addEventListener('click', togglePause);
+            document.getElementById('restartBtn').addEventListener('click', restartLevel);
+        }
+        
+        function loadLevel(level) {
+            // Clear existing objects
+            ghosts = [];
+            spikes = [];
+            fallingObjects = [];
+            collectibles = [];
+            powerUps = [];
+            platforms = [];
+            keys = 0;
+            
+            // Reset player position
+            player.x = 50;
+            player.y = canvas.height - 150;
+            player.velocityX = 0;
+            player.velocityY = 0;
+            
+            // Create platforms
+            platforms = [
+                { x: 0, y: canvas.height - 50, width: canvas.width, height: 50 }, // Ground
+                { x: 200, y: canvas.height - 200, width: 150, height: 20 },
+                { x: 450, y: canvas.height - 300, width: 150, height: 20 },
+                { x: 700, y: canvas.height - 250, width: 150, height: 20 }
+            ];
+            
+            // Create level-specific content
+            switch(level) {
+                case 1:
+                    createLevel1();
+                    break;
+                case 2:
+                    createLevel2();
+                    break;
+                case 3:
+                    createLevel3();
+                    break;
+                default:
+                    // Victory condition
+                    gameState = 'victory';
+                    window.location.href = 'victory_screen.html';
+                    return;
+            }
+            
+            // Update HUD
+            updateHUD();
+        }
+        
+        function createLevel1() {
+            // Simple level with 2 ghosts and 1 key
+            ghosts.push({
+                x: 300,
+                y: canvas.height - 100,
+                width: 25,
+                height: 25,
+                speed: 2,
+                direction: 1,
+                minX: 250,
+                maxX: 400
+            });
+            
+            ghosts.push({
+                x: 600,
+                y: canvas.height - 300,
+                width: 25,
+                height: 25,
+                speed: 1.5,
+                direction: -1,
+                minX: 550,
+                maxX: 750
+            });
+            
+            // Spikes
+            spikes.push({ x: 500, y: canvas.height - 70, width: 30, height: 20 });
+            
+            // Key
+            collectibles.push({
+                x: 750,
+                y: canvas.height - 280,
+                width: 20,
+                height: 20,
+                type: 'key',
+                collected: false
+            });
+            
+            // Power-up
+            powerUps.push({
+                x: 220,
+                y: canvas.height - 230,
+                width: 20,
+                height: 20,
+                collected: false
+            });
+            
+            // Door
+            door = {
+                x: canvas.width - 80,
+                y: canvas.height - 130,
+                width: 60,
+                height: 80,
+                locked: true
+            };
+        }
+        
+        function createLevel2() {
+            // Medium difficulty with 3 ghosts and falling objects
+            ghosts.push({
+                x: 200,
+                y: canvas.height - 100,
+                width: 25,
+                height: 25,
+                speed: 2.5,
+                direction: 1,
+                minX: 150,
+                maxX: 350
+            });
+            
+            ghosts.push({
+                x: 500,
+                y: canvas.height - 330,
+                width: 25,
+                height: 25,
+                speed: 2,
+                direction: -1,
+                minX: 450,
+                maxX: 600
+            });
+            
+            ghosts.push({
+                x: 800,
+                y: canvas.height - 100,
+                width: 25,
+                height: 25,
+                speed: 1.8,
+                direction: 1,
+                minX: 750,
+                maxX: 900
+            });
+            
+            // More spikes
+            spikes.push({ x: 400, y: canvas.height - 70, width: 30, height: 20 });
+            spikes.push({ x: 650, y: canvas.height - 70, width: 30, height: 20 });
+            
+            // Key
+            collectibles.push({
+                x: 470,
+                y: canvas.height - 360,
+                width: 20,
+                height: 20,
+                type: 'key',
+                collected: false
+            });
+            
+            // Door
+            door = {
+                x: canvas.width - 80,
+                y: canvas.height - 130,
+                width: 60,
+                height: 80,
+                locked: true
+            };
+        }
+        
+        function createLevel3() {
+            // Hard level with 4 ghosts and more hazards
+            for(let i = 0; i < 4; i++) {
+                ghosts.push({
+                    x: 200 + i * 200,
+                    y: canvas.height - 100 - (i % 2) * 200,
+                    width: 25,
+                    height: 25,
+                    speed: 2 + i * 0.3,
+                    direction: i % 2 === 0 ? 1 : -1,
+                    minX: 150 + i * 200,
+                    maxX: 300 + i * 200
+                });
+            }
+            
+            // Multiple spikes
+            for(let i = 0; i < 5; i++) {
+                spikes.push({ 
+                    x: 300 + i * 150, 
+                    y: canvas.height - 70, 
+                    width: 30, 
+                    height: 20 
+                });
+            }
+            
+            // Key
+            collectibles.push({
+                x: 720,
+                y: canvas.height - 280,
+                width: 20,
+                height: 20,
+                type: 'key',
+                collected: false
+            });
+            
+            // Door
+            door = {
+                x: canvas.width - 80,
+                y: canvas.height - 130,
+                width: 60,
+                height: 80,
+                locked: true
+            };
+        }
+        
+        function gameLoop() {
+            if (gameState !== 'playing') return;
+            
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function update() {
+            // Update player
+            updatePlayer();
+            
+            // Update ghosts
+            updateGhosts();
+            
+            // Update falling objects
+            updateFallingObjects();
+            
+            // Update power-up timer
+            if (powerUpActive) {
+                powerUpTimer--;
+                if (powerUpTimer <= 0) {
+                    powerUpActive = false;
+                    document.getElementById('powerUpStatus').classList.add('hidden');
+                }
+            }
+            
+            // Update player invulnerability
+            if (player.invulnerable) {
+                player.invulnerabilityTimer--;
+                if (player.invulnerabilityTimer <= 0) {
+                    player.invulnerable = false;
+                }
+            }
+            
+            // Check collisions
+            checkCollisions();
+            
+            // Spawn falling objects randomly
+            if (Math.random() < 0.005) {
+                spawnFallingObject();
+            }
+        }
+        
+        function updatePlayer() {
+            // Handle input
+            let moving = false;
+            
+            if (keys_pressed['KeyA'] || keys_pressed['ArrowLeft'] || touchControls.left) {
+                player.velocityX = -player.speed;
+                moving = true;
+            } else if (keys_pressed['KeyD'] || keys_pressed['ArrowRight'] || touchControls.right) {
+                player.velocityX = player.speed;
+                moving = true;
+            } else {
+                player.velocityX *= 0.8; // Friction
+            }
+            
+            if ((keys_pressed['KeyW'] || keys_pressed['ArrowUp'] || keys_pressed['Space'] || touchControls.jump) && player.onGround) {
+                player.velocityY = -player.jumpPower;
+                player.onGround = false;
+            }
+            
+            // Apply gravity
+            player.velocityY += 0.8;
+            
+            // Update position
+            player.x += player.velocityX;
+            player.y += player.velocityY;
+            
+            // Check platform collisions
+            player.onGround = false;
+            for (let platform of platforms) {
+                if (player.x < platform.x + platform.width &&
+                    player.x + player.width > platform.x &&
+                    player.y + player.height > platform.y &&
+                    player.y + player.height < platform.y + platform.height + 10 &&
+                    player.velocityY > 0) {
+                    
+                    player.y = platform.y - player.height;
+                    player.velocityY = 0;
+                    player.onGround = true;
+                }
+            }
+            
+            // Keep player in bounds
+            player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+            
+            // Check if player falls off screen
+            if (player.y > canvas.height) {
+                takeDamage();
+            }
+        }
+        
+        function updateGhosts() {
+            for (let ghost of ghosts) {
+                ghost.x += ghost.speed * ghost.direction;
+                
+                if (ghost.x <= ghost.minX || ghost.x >= ghost.maxX) {
+                    ghost.direction *= -1;
+                }
+            }
+        }
+        
+        function updateFallingObjects() {
+            for (let i = fallingObjects.length - 1; i >= 0; i--) {
+                let obj = fallingObjects[i];
+                obj.y += obj.speed;
+                
+                // Remove if off screen
+                if (obj.y > canvas.height) {
+                    fallingObjects.splice(i, 1);
+                }
+            }
+        }
+        
+        function spawnFallingObject() {
+            fallingObjects.push({
+                x: Math.random() * (canvas.width - 30),
+                y: -30,
+                width: 30,
+                height: 30,
+                speed: 3 + Math.random() * 3
+            });
+        }
+        
+        function checkCollisions() {
+            // Ghost collisions
+            if (!player.invulnerable && !powerUpActive) {
+                for (let ghost of ghosts) {
+                    if (isColliding(player, ghost)) {
+                        takeDamage();
+                        break;
+                    }
+                }
+            }
+            
+            // Spike collisions
+            if (!player.invulnerable) {
+                for (let spike of spikes) {
+                    if (isColliding(player, spike)) {
+                        takeDamage();
+                        break;
+                    }
+                }
+            }
+            
+            // Falling object collisions
+            if (!player.invulnerable) {
+                for (let obj of fallingObjects) {
+                    if (isColliding(player, obj)) {
+                        takeDamage();
+                        break;
+                    }
+                }
+            }
+            
+            // Collectible collisions
+            for (let collectible of collectibles) {
+                if (!collectible.collected && isColliding(player, collectible)) {
+                    collectible.collected = true;
+                    if (collectible.type === 'key') {
+                        keys++;
+                        score += 100;
+                        showKeyCollected();
+                        
+                        // Unlock door if all keys collected
+                        if (keys >= 1) {
+                            door.locked = false;
+                        }
+                    }
+                    updateHUD();
+                }
+            }
+            
+            // Power-up collisions
+            for (let powerUp of powerUps) {
+                if (!powerUp.collected && isColliding(player, powerUp)) {
+                    powerUp.collected = true;
+                    activatePowerUp();
+                    score += 50;
+                    updateHUD();
+                }
+            }
+            
+            // Door collision
+            if (door && !door.locked && isColliding(player, door)) {
+                nextLevel();
+            }
+        }
+        
+        function isColliding(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        function takeDamage() {
+            if (player.invulnerable) return;
+            
+            lives--;
+            player.invulnerable = true;
+            player.invulnerabilityTimer = 120; // 2 seconds at 60fps
+            
+            // Visual feedback
+            document.body.classList.add('damage-flash');
+            setTimeout(() => {
+                document.body.classList.remove('damage-flash');
+            }, 500);
+            
+            updateHUD();
+            
+            if (lives <= 0) {
+                gameState = 'gameOver';
+                setTimeout(() => {
+                    window.location.href = 'game_over_screen.html';
+                }, 1000);
+            }
+        }
+        
+        function activatePowerUp() {
+            powerUpActive = true;
+            powerUpTimer = 300; // 5 seconds at 60fps
+            document.getElementById('powerUpStatus').classList.remove('hidden');
+        }
+        
+        function showKeyCollected() {
+            const keyStatus = document.getElementById('keysStatus');
+            keyStatus.classList.remove('hidden');
+            setTimeout(() => {
+                keyStatus.classList.add('hidden');
+            }, 2000);
+        }
+        
+        function nextLevel() {
+            currentLevel++;
+            score += 200; // Level completion bonus
+            
+            if (currentLevel > 3) {
+                gameState = 'victory';
+                setTimeout(() => {
+                    window.location.href = 'victory_screen.html';
+                }, 500);
+            } else {
+                gameState = 'loading';
+                document.getElementById('loadingScreen').style.display = 'flex';
+                setTimeout(() => {
+                    loadLevel(currentLevel);
+                    gameState = 'playing';
+                    document.getElementById('loadingScreen').style.display = 'none';
+                }, 1500);
+            }
+        }
+        
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = '#0F0F23';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background pattern
+            drawBackground();
+            
+            // Draw platforms
+            ctx.fillStyle = '#2D1B69';
+            for (let platform of platforms) {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            }
+            
+            // Draw spikes
+            ctx.fillStyle = '#FF1744';
+            for (let spike of spikes) {
+                ctx.fillRect(spike.x, spike.y, spike.width, spike.height);
+                // Draw spike points
+                ctx.beginPath();
+                ctx.moveTo(spike.x, spike.y);
+                ctx.lineTo(spike.x + spike.width/2, spike.y - 10);
+                ctx.lineTo(spike.x + spike.width, spike.y);
+                ctx.fill();
+            }
+            
+            // Draw ghosts
+            ctx.fillStyle = powerUpActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)';
+            for (let ghost of ghosts) {
+                ctx.fillRect(ghost.x, ghost.y, ghost.width, ghost.height);
+                // Draw ghost eyes
+                ctx.fillStyle = '#000';
+                ctx.fillRect(ghost.x + 5, ghost.y + 5, 4, 4);
+                ctx.fillRect(ghost.x + 16, ghost.y + 5, 4, 4);
+                ctx.fillStyle = powerUpActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)';
+            }
+            
+            // Draw falling objects
+            ctx.fillStyle = '#8B4513';
+            for (let obj of fallingObjects) {
+                ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+            }
+            
+            // Draw collectibles
+            for (let collectible of collectibles) {
+                if (!collectible.collected) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fillRect(collectible.x, collectible.y, collectible.width, collectible.height);
+                    // Draw key shape
+                    ctx.fillRect(collectible.x + 15, collectible.y + 5, 3, 10);
+                }
+            }
+            
+            // Draw power-ups
+            for (let powerUp of powerUps) {
+                if (!powerUp.collected) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+                    // Draw cross shape
+                    ctx.fillRect(powerUp.x + 8, powerUp.y + 2, 4, 16);
+                    ctx.fillRect(powerUp.x + 2, powerUp.y + 8, 16, 4);
+                }
+            }
+            
+            // Draw door
+            if (door) {
+                ctx.fillStyle = door.locked ? '#8B4513' : '#32CD32';
+                ctx.fillRect(door.x, door.y, door.width, door.height);
+                // Draw door handle
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(door.x + door.width - 15, door.y + door.height/2 - 3, 8, 6);
+            }
+            
+            // Draw player
+            ctx.fillStyle = player.invulnerable && Math.floor(Date.now() / 100) % 2 ? 
+                           'rgba(255, 215, 0, 0.5)' : player.color;
+            if (powerUpActive) {
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 10;
+            }
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.shadowBlur = 0;
+            
+            // Draw player eyes
+            ctx.fillStyle = '#000';
+            ctx.fillRect(player.x + 5, player.y + 5, 4, 4);
+            ctx.fillRect(player.x + 21, player.y + 5, 4, 4);
+        }
+        
+        function drawBackground() {
+            // Draw atmospheric background elements
+            ctx.fillStyle = 'rgba(45, 27, 105, 0.1)';
+            for (let i = 0; i < 20; i++) {
+                let x = (i * 100 + Date.now() * 0.01) % (canvas.width + 50);
+                let y = 50 + Math.sin(i + Date.now() * 0.001) * 30;
+                ctx.fillRect(x, y, 2, 2);
+            }
+        }
+        
+        function updateHUD() {
+            // Update lives display
+            const livesDisplay = document.getElementById('livesDisplay');
+            livesDisplay.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                livesDisplay.innerHTML += '<span class="text-error text-lg">❤️</span>';
+            }
+            
+            // Update level display
+            document.getElementById('levelDisplay').textContent = currentLevel;
+            
+            // Update score display
+            document.getElementById('scoreDisplay').textContent = score.toLocaleString();
+        }
+        
+        function togglePause() {
+            if (gameState === 'playing') {
+                gameState = 'paused';
+                document.getElementById('pauseMenu').classList.remove('hidden');
+                document.getElementById('pauseMenu').classList.add('flex');
+            } else if (gameState === 'paused') {
+                gameState = 'playing';
+                document.getElementById('pauseMenu').classList.add('hidden');
+                document.getElementById('pauseMenu').classList.remove('flex');
+                gameLoop();
+            }
+        }
+        
+        function restartLevel() {
+            gameState = 'loading';
+            document.getElementById('pauseMenu').classList.add('hidden');
+            document.getElementById('pauseMenu').classList.remove('flex');
+            document.getElementById('loadingScreen').style.display = 'flex';
+            
+            setTimeout(() => {
+                loadLevel(currentLevel);
+                gameState = 'playing';
+                document.getElementById('loadingScreen').style.display = 'none';
+                gameLoop();
+            }, 1000);
+        }
+        
+        // Initialize game when page loads
+        window.addEventListener('load', initGame);
+        
+        // Prevent context menu on touch controls
+        document.addEventListener('contextmenu', (e) => {
+            if (e.target.classList.contains('touch-control')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Prevent scrolling on mobile
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+<script id="dhws-dataInjector" src="../public/dhws-data-injector.js"></script>
+</body>
+</html>
